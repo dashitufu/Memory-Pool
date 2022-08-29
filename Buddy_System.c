@@ -1045,12 +1045,14 @@ void Shrink(Mem_Mgr* poMem_Mgr,void *p, unsigned int iSize)
 int bExpand(Mem_Mgr* poMem_Mgr, void* p, unsigned int iSize)
 {
 	Mem_Mgr_Hash_Item* poItem;
-	int iSub_Block_Start = (unsigned int)((unsigned char*)p - poMem_Mgr->m_pBuffer) / poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block,
-		iSub_Block_Free_Count,iBlock_Start;
-	unsigned int iOrg_Size,iSize_Delta,iNew_Block_Count,i;
-	int iResult;
+	int iSub_Block_Start_All = (unsigned int)((unsigned char*)p - poMem_Mgr->m_pBuffer) / poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block,
+		iSub_Block_Count_Need,
+		iSub_Block_Count_Free,iBlock_Start,iSub_Block_Start;
+	unsigned int iOrg_Size, iSize_Delta, iNew_Block_Count;
+	int i, j, iZero_Bit_Count,iResult;
+	unsigned long long iOccupancy;
 
-	poItem = poFind(poMem_Mgr->m_pHash_Item, iSub_Block_Start, poMem_Mgr->m_pHash_Table, poMem_Mgr->m_iHash_Size);
+	poItem = poFind(poMem_Mgr->m_pHash_Item, iSub_Block_Start_All, poMem_Mgr->m_pHash_Table, poMem_Mgr->m_iHash_Size);
 	iOrg_Size = (unsigned int)(poItem->m_iSub_Block_Count * poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block);
 	iSize_Delta = iSize - iOrg_Size;
 	if (iSize <= iOrg_Size)
@@ -1065,24 +1067,37 @@ int bExpand(Mem_Mgr* poMem_Mgr, void* p, unsigned int iSize)
 		if (iNew_Block_Count)
 			break;
 	}
+	iSub_Block_Count_Need = (iSize_Delta + poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block - 1) / poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block;
+
 	if (!iNew_Block_Count)
 	{//遍历所有层没一个能占超过一个Block的，肯定在0层里，而且不超过两个Block
-		iBlock_Start =(int) (((poItem->m_iPos + poItem->m_iSub_Block_Count) * poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block) / poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block);
-		iResult=bTest_Space_Layer_0(poMem_Mgr,iBlock_Start,iBlock_Start+1,iSize, &iSub_Block_Start, &iSub_Block_Free_Count, 0);
+		iBlock_Start =(int) (((poItem->m_iPos + poItem->m_iSub_Block_Count) * poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block) / poMem_Mgr->m_Layer[0].m_iBytes_Per_Block);
+		iSub_Block_Start = (poItem->m_iPos + poItem->m_iSub_Block_Count) % 64;
+		iOccupancy = ((unsigned long long*)poMem_Mgr->m_Layer[0].m_pIndex)[iBlock_Start];
+		iOccupancy >>= iSub_Block_Start;
+		for (j=iSub_Block_Start, iZero_Bit_Count=0; j < 64 && iZero_Bit_Count < iSub_Block_Count_Need; j++, iOccupancy >>= 1, iZero_Bit_Count++)
+			if (iOccupancy & 1)
+				break;
+		if (iZero_Bit_Count >= iSub_Block_Count_Need)
+		{
+			iResult = 1;
+			iSub_Block_Start_All = (iBlock_Start << 6) + iSub_Block_Start;
+			iSub_Block_Count_Free = iSub_Block_Count_Need;
+		}
 	}else if (i == 0)
 	{
-		iBlock_Start =(int) (((poItem->m_iPos + poItem->m_iSub_Block_Count) * poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block) / poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block);
-		iResult = bTest_Space_Layer_0(poMem_Mgr, iBlock_Start, iBlock_Start + iNew_Block_Count + 1, iSize, &iSub_Block_Start, &iSub_Block_Free_Count, 0);
+		iBlock_Start =(int) (((poItem->m_iPos + poItem->m_iSub_Block_Count) * poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block) / poMem_Mgr->m_Layer[0].m_iBytes_Per_Block);
+		iResult = bTest_Space_Layer_0(poMem_Mgr, iBlock_Start, iBlock_Start + iNew_Block_Count + 1, iSize_Delta, &iSub_Block_Start_All, &iSub_Block_Count_Free, 0);
 	}else
 	{
 		iBlock_Start = (int)(((poItem->m_iPos + poItem->m_iSub_Block_Count) * poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block) / poMem_Mgr->m_Layer[i].m_iBytes_Per_Block);
-		iResult = bTest_Space_1(poMem_Mgr, iBlock_Start, iBlock_Start + iNew_Block_Count + 1,iSize_Delta,i, &iSub_Block_Start, &iSub_Block_Free_Count, 0);
+		iResult = bTest_Space_1(poMem_Mgr, iBlock_Start, iBlock_Start + iNew_Block_Count + 1,iSize_Delta,i, &iSub_Block_Start_All, &iSub_Block_Count_Free, 0);
 	}
 	
-	if (iResult && iSub_Block_Start == poItem->m_iPos + poItem->m_iSub_Block_Count)
+	if (iResult && iSub_Block_Start_All == poItem->m_iPos + poItem->m_iSub_Block_Count)
 	{
-		Set_Index(poMem_Mgr, iSub_Block_Start, iSub_Block_Free_Count, 1, 0);
-		poItem->m_iSub_Block_Count += iSub_Block_Free_Count;
+		Set_Index(poMem_Mgr, iSub_Block_Start_All, iSub_Block_Count_Free, 1, 0);
+		poItem->m_iSub_Block_Count += iSub_Block_Count_Free;
 		return 1;
 	}else
 		return 0;

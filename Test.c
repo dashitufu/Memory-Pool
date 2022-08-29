@@ -11,10 +11,8 @@ static void Set_Value(unsigned int* p, int iSize)
 	for (int j = 0; j < iSize; j++)
 	{
 		p[j] = j;
-	}
-		
+	}		
 }
-
 static void Test_Mem_Mgr(Mem_Mgr* poMem_Mgr)
 {//对Mem_Mgr的内容验算
 	int i, j, * p;
@@ -211,8 +209,8 @@ void Expand_Test()
 
 	Disp_Mem(&oMem_Mgr, 2);
 	Free(&oMem_Mgr, Allocate[1],0);
-	bExpand(&oMem_Mgr, Allocate[0], (unsigned int)(oMem_Mgr.m_Layer[2].m_iBytes_Per_Block * 20));
-	Piece_Size[0] = (unsigned int)(oMem_Mgr.m_Layer[2].m_iBytes_Per_Block * 20);
+	bExpand(&oMem_Mgr, Allocate[0], Piece_Size[0]+1024* 1310720);
+	Piece_Size[0] = (unsigned int)(Piece_Size[0] + 1024 * 1310720);
 	Set_Value((unsigned int*)Allocate[0], Piece_Size[0] / 4);
 	Test_Mem_Mgr(&oMem_Mgr);
 
