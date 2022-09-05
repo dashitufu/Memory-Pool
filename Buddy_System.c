@@ -133,6 +133,8 @@ void Add_To_Hash_Table(struct Mem_Mgr_Hash_Item Item[], int* piCur_Item, struct 
 	unsigned long long iPos;
 	int iHash_Pos, iCur_Item = *piCur_Item;
 	struct Mem_Mgr_Hash_Item oItem_Exist;
+	//if (oItem.m_iPos == 13421479)
+		//printf("Here");
 
 	iHash_Pos = oItem.m_iPos % iHash_Size;
 
@@ -281,10 +283,17 @@ void Free_Mem_Mgr(Mem_Mgr* poMem_Mgr)
 	memset(poMem_Mgr, 0, sizeof(Mem_Mgr));
 	return;
 }
-
 int iGet_Left_Free_Sub_Block_Count_32(unsigned long long iOccupancy)
 {//寻找最左边的空闲子块。低地址在iOccupancy低位，高地址在高位
 	int i, iSub_Block_Count = 0;
+	/*for (i = 0; i < 32; i++)
+	{
+		if (iOccupancy >> 56)
+			break;
+		else
+			iOccupancy <<= 8;
+	}
+	for (; i < 32; i++)*/
 	for (i = 0; i < 32; i++)
 	{
 		if ((iOccupancy >> 62) == Empty)
@@ -295,40 +304,56 @@ int iGet_Left_Free_Sub_Block_Count_32(unsigned long long iOccupancy)
 		else
 			break;
 	}
-	return iSub_Block_Count;
+	//return iSub_Block_Count;
+	return i;
 }
 
 void Get_Left_Free_Sub_Block_Count_32(unsigned long long iOccupancy, int* piSub_Block_Count_Free, Occupancy_Type* piType)
 {//Return	piType: 本Block的占用情况
-	int i, iSub_Block_Count = 0;
+	int i/*, iSub_Block_Count = 0*/;
+	/*for (i = 0; i < 32; i += 4)
+	{
+		if (iOccupancy >> 56)
+			break;
+		else
+			iOccupancy <<= 8;
+	}
+	for (; i < 32; i++)*/
+
 	for (i = 0; i < 32; i++)
 	{
 		if ((iOccupancy >> 62) == Empty)
-		{
-			iSub_Block_Count++;
 			iOccupancy <<= 2;
-		}
-		else {
+		else
+		{
 			*piType = (Occupancy_Type)(iOccupancy >> 62);
 			break;
 		}
 	}
+
 	if (i == 32)
 		*piType = Empty;
-	*piSub_Block_Count_Free = iSub_Block_Count;
+
+	*piSub_Block_Count_Free = i;
+	//*piSub_Block_Count_Free = iSub_Block_Count;
 	return;
 }
 
-
-
 void Get_Right_Free_Sub_Block_Count_32(unsigned long long iOccupancy, int* piSub_Block_Count_Free, Occupancy_Type* piType)
 {
-	int i, iSub_Block_Count = 0;
+	int i;
+	/*for (i = 0; i < 32; i += 4)
+	{
+		if (iOccupancy & 0xFF)
+			break;
+		else
+			iOccupancy >>= 8;
+	}
+	for (; i < 32; i++)*/
 	for (i = 0; i < 32; i++)
 	{
 		if ((iOccupancy & 3) == Empty)
 		{
-			iSub_Block_Count++;
 			iOccupancy >>= 2;
 		}
 		else
@@ -339,35 +364,133 @@ void Get_Right_Free_Sub_Block_Count_32(unsigned long long iOccupancy, int* piSub
 	else
 		*piType = (Occupancy_Type)(iOccupancy & 3);
 
-	*piSub_Block_Count_Free = iSub_Block_Count;
+	*piSub_Block_Count_Free = i;	//iSub_Block_Count;
 }
 int iGet_Right_Free_Sub_Block_Count_64(unsigned long long iOccupancy)
 {
-	int i, iSub_Block_Count = 0;
+	int i;
+	/*for (i = 0; i < 64; i += 8)
+	{
+		if (iOccupancy & 0xFF)
+			break;
+		else
+			iOccupancy >>= 8;
+	}
+	for (; i < 64; i++)*/
 	for (i = 0; i < 64; i++)
 	{
-		if (!(iOccupancy & 1))
-		{
-			iSub_Block_Count++;
+		if (iOccupancy & 1)
+			break;
+		else
 			iOccupancy >>= 1;
-		}
 	}
-	return iSub_Block_Count;
+	return i;
 }
-
 int iGet_Left_Free_Sub_Block_Count_64(unsigned long long iOccupancy)
 {
-	int i, iSub_Block_Count = 0;
+	int i;
+	/*for (i = 0; i < 64; i += 8)
+	{
+		if (iOccupancy >> 56)
+			break;
+		else
+			iOccupancy <<= 8;
+	}
+	for (; i < 64; i++)*/
 	for (i = 0; i < 64; i++)
 	{
-		if (!(iOccupancy >> 63))
-		{
-			iSub_Block_Count++;
+		if (iOccupancy >> 63)
+			break;
+		else
 			iOccupancy <<= 1;
-		}
 	}
-	return iSub_Block_Count;
+	return i;
 }
+
+//int iGet_Left_Free_Sub_Block_Count_32(unsigned long long iOccupancy)
+//{//寻找最左边的空闲子块。低地址在iOccupancy低位，高地址在高位
+//	int i, iSub_Block_Count = 0;
+//	for (i = 0; i < 32; i++)
+//	{
+//		if ((iOccupancy >> 62) == Empty)
+//		{
+//			iSub_Block_Count++;
+//			iOccupancy <<= 2;
+//		}
+//		else
+//			break;
+//	}
+//	return iSub_Block_Count;
+//}
+//
+//void Get_Left_Free_Sub_Block_Count_32(unsigned long long iOccupancy, int* piSub_Block_Count_Free, Occupancy_Type* piType)
+//{//Return	piType: 本Block的占用情况
+//	int i, iSub_Block_Count = 0;
+//	for (i = 0; i < 32; i++)
+//	{
+//		if ((iOccupancy >> 62) == Empty)
+//		{
+//			iSub_Block_Count++;
+//			iOccupancy <<= 2;
+//		}
+//		else {
+//			*piType = (Occupancy_Type)(iOccupancy >> 62);
+//			break;
+//		}
+//	}
+//	if (i == 32)
+//		*piType = Empty;
+//	*piSub_Block_Count_Free = iSub_Block_Count;
+//	return;
+//}
+//
+//void Get_Right_Free_Sub_Block_Count_32(unsigned long long iOccupancy, int* piSub_Block_Count_Free, Occupancy_Type* piType)
+//{
+//	int i, iSub_Block_Count = 0;
+//	for (i = 0; i < 32; i++)
+//	{
+//		if ((iOccupancy & 3) == Empty)
+//		{
+//			iSub_Block_Count++;
+//			iOccupancy >>= 2;
+//		}
+//		else
+//			break;
+//	}
+//	if (i == 32)
+//		*piType = Empty;
+//	else
+//		*piType = (Occupancy_Type)(iOccupancy & 3);
+//
+//	*piSub_Block_Count_Free = iSub_Block_Count;
+//}
+//int iGet_Right_Free_Sub_Block_Count_64(unsigned long long iOccupancy)
+//{
+//	int i, iSub_Block_Count = 0;
+//	for (i = 0; i < 64; i++)
+//	{
+//		if (!(iOccupancy & 1))
+//		{
+//			iSub_Block_Count++;
+//			iOccupancy >>= 1;
+//		}
+//	}
+//	return iSub_Block_Count;
+//}
+//
+//int iGet_Left_Free_Sub_Block_Count_64(unsigned long long iOccupancy)
+//{
+//	int i, iSub_Block_Count = 0;
+//	for (i = 0; i < 64; i++)
+//	{
+//		if (!(iOccupancy >> 63))
+//		{
+//			iSub_Block_Count++;
+//			iOccupancy <<= 1;
+//		}
+//	}
+//	return iSub_Block_Count;
+//}
 
 int iGet_Left_Block_Start_of_Layer_0(Mem_Mgr* poMem_Mgr, int iCur_Layer, int iBlock_Start_of_Seeond_Layer)
 {//一直下探到0层的开始空闲Sub_Block位置，返回这个位置(Sub_Block_Pos)
@@ -501,7 +624,8 @@ int bTest_Space_Layer_0(Mem_Mgr* poMem_Mgr, int iBlock_Start_Limit, int iBlock_E
 	if (iBlock_End_Limit >= (int)poLayer->m_iBlock_Count)
 		iBlock_End_Limit = poLayer->m_iBlock_Count - 1;
 
-	if (iBlock_Count_Need <= 1)
+	//if (iBlock_Count_Need<=1)
+	if(iSub_Block_Count_Need<=64)
 	{//当所需空间连一个Block都用不了得时候，直接从从开始位置向右查找
 		for (i = iBlock_Start_Limit; i <= iBlock_End_Limit; i++)
 		{
@@ -548,8 +672,7 @@ int bTest_Space_Layer_0(Mem_Mgr* poMem_Mgr, int iBlock_Start_Limit, int iBlock_E
 				}
 			}
 		}
-	}
-	else
+	}else
 	{//此处继续跟随bTest_Space_1的策略，分左中右分别讨论
 		for (i = iBlock_Start_Limit; i <= iBlock_End_Limit;)
 		{
@@ -775,7 +898,8 @@ int bTest_Space_1(Mem_Mgr* poMem_Mgr, int iBlock_Start_Limit, int iBlock_End_Lim
 	{//先搞定Block级，再搞Sub Block级。每一级再分左中右三段
 		while (pIndex_64[i] == 0xFFFFFFFFFFFFFFFF && i < (int)poLayer->m_iBlock_Count)
 			i++;
-
+		//if (iCur_Piece == 5133 && iLayer==1 && i>=1282)
+			//printf("Here");
 		if (i > iBlock_End_Limit)
 			break;
 		if (iSub_Block_Count_Need < 32 && iLayer>0)
@@ -896,6 +1020,50 @@ int bTest_Space_1(Mem_Mgr* poMem_Mgr, int iBlock_Start_Limit, int iBlock_End_Lim
 	}
 }
 
+//从最后开始分配内存
+//Input： iSize: 要分配内存的字节数
+//return: void 指针，用户自己转换为自己的类型
+void* pMalloc_At_End(Mem_Mgr* poMem_Mgr, unsigned int iSize)
+{//这个实在嫌麻烦，从0层搞算了。因为用这种玩法的一般都是小内存，封闭的程序里玩，比如Codec
+	
+}
+
+//分配内存
+//Input： iSize: 要分配内存的字节数
+//return: void 指针，用户自己转换为自己的类型
+void* pMalloc_1(Mem_Mgr* poMem_Mgr, unsigned int iSize)
+{//在碎片化的情况下，这个贼快。不走树，只走底层
+	int iResult;
+	int iLayer_0_Sub_Block_Start_All, iLayer_0_Sub_Block_Count;
+	static int iCur_Piece = 0;	//调试用，没啥营养
+
+	if (poMem_Mgr->m_iPiece_Count >= poMem_Mgr->m_iHash_Size)
+	{
+		printf("超过可分配片数\n");
+		return NULL;
+	}
+	else if (iSize <= 0)
+		return NULL;
+
+	iResult = bTest_Space_Layer_0(poMem_Mgr, 0, poMem_Mgr->m_Layer[0].m_iBlock_Count - 1, iSize, &iLayer_0_Sub_Block_Start_All, &iLayer_0_Sub_Block_Count, iCur_Piece);
+	if (!iResult)
+		return NULL;
+	//再将各层置值，0层对应位置1，其余层根据实际情况置Full或者Half Full
+	Set_Index(poMem_Mgr, iLayer_0_Sub_Block_Start_All, iLayer_0_Sub_Block_Count, 1, iCur_Piece);
+
+	//将本项（Piece）的情况加入散列表，其实就两样东西，起始位置和长度（分配大小）
+	struct Mem_Mgr_Hash_Item oItem = { (unsigned long long)iLayer_0_Sub_Block_Start_All ,(unsigned long long)iLayer_0_Sub_Block_Count };
+	Add_To_Hash_Table(poMem_Mgr->m_pHash_Item, &poMem_Mgr->m_iCur_Item, oItem, poMem_Mgr->m_pHash_Table, poMem_Mgr->m_iHash_Size);
+	poMem_Mgr->m_iPiece_Count++;
+
+	//if ((((unsigned char*)Allocate[i]) - oMem_Mgr.m_pBuffer) / 1024 == 13421479)
+	//if (iLayer_0_Sub_Block_Start_All == 13421479)
+		//printf("Here");
+
+	iCur_Piece++;
+	return poMem_Mgr->m_pBuffer + oItem.m_iPos * (unsigned long long)poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block;
+}
+
 //分配内存
 //Input： iSize: 要分配内存的字节数
 //return: void 指针，用户自己转换为自己的类型
@@ -922,7 +1090,10 @@ void* pMalloc(Mem_Mgr* poMem_Mgr, unsigned int iSize)
 		iResult = bTest_Space_Layer_0(poMem_Mgr, 0, poMem_Mgr->m_Layer[poMem_Mgr->m_iLayer_Count - 1].m_iBlock_Count - 1, iSize, &iLayer_0_Sub_Block_Start_All, &iLayer_0_Sub_Block_Count, iCur_Piece);
 	if (!iResult)
 		return NULL;
-
+	//if (iCur_Piece == 5132)
+		//printf("Here");
+	//if (iLayer_0_Sub_Block_Start_All >= 41048 * 64)
+		//printf("Here");
 	//再将各层置值，0层对应位置1，其余层根据实际情况置Full或者Half Full
 	Set_Index(poMem_Mgr, iLayer_0_Sub_Block_Start_All, iLayer_0_Sub_Block_Count, 1, iCur_Piece);
 
@@ -932,7 +1103,7 @@ void* pMalloc(Mem_Mgr* poMem_Mgr, unsigned int iSize)
 	poMem_Mgr->m_iPiece_Count++;
 
 	iCur_Piece++;
-	return poMem_Mgr->m_pBuffer + oItem.m_iPos * poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block;
+	return poMem_Mgr->m_pBuffer + oItem.m_iPos * (unsigned long long)poMem_Mgr->m_iBytes_Per_Bottom_Sub_Block;
 }
 
 //释放一项
@@ -989,9 +1160,10 @@ static int iQuick_Sort_Partition(struct Mem_Mgr_Hash_Item* pBuffer, int left, in
 
 static void Quick_Sort(struct Mem_Mgr_Hash_Item Seq[], int iStart, int iEnd)
 {//注意：iEnd不是下一个可用的无数据元素，而是最后一个已经有数据的元素，与以往惯例不一样
+	int iPos;
 	if (iStart < iEnd)
 	{
-		int iPos = iQuick_Sort_Partition(Seq, iStart, iEnd);
+		iPos = iQuick_Sort_Partition(Seq, iStart, iEnd);
 		Quick_Sort(Seq, iStart, iPos - 1);
 		Quick_Sort(Seq, iPos + 1, iEnd);
 	}
@@ -1003,10 +1175,12 @@ void Disp_Mem(Mem_Mgr* poMem_Mgr,int iLayer_Count)
 	int i, j;
 	struct Mem_Mgr_Hash_Item* pBuffer = (struct Mem_Mgr_Hash_Item*)malloc(poMem_Mgr->m_iPiece_Count * sizeof(struct Mem_Mgr_Hash_Item));
 	memcpy(pBuffer, poMem_Mgr->m_pHash_Item + 1, poMem_Mgr->m_iPiece_Count * sizeof(struct Mem_Mgr_Hash_Item));
-	Quick_Sort(pBuffer, 0, poMem_Mgr->m_iPiece_Count - 1);
-	printf("End 为下一个可用位置\n");
-	for (i = 0; i < poMem_Mgr->m_iPiece_Count; i++)
-		printf("Piece:%d Pos:%d block count:%d End:%d\n", i, (int)pBuffer[i].m_iPos, (int)pBuffer[i].m_iSub_Block_Count, (int)(pBuffer[i].m_iPos + pBuffer[i].m_iSub_Block_Count));
+	
+	//破逼Quick_Sort太渣，应对不了特殊形态的序列，要换一种方式
+	//Quick_Sort(pBuffer, 0, poMem_Mgr->m_iPiece_Count - 1);
+	//printf("End 为下一个可用位置\n");
+	//for (i = 0; i < poMem_Mgr->m_iPiece_Count; i++)
+		//printf("Piece:%d Pos:%d block count:%d End:%d\n", i, (int)pBuffer[i].m_iPos, (int)pBuffer[i].m_iSub_Block_Count, (int)(pBuffer[i].m_iPos + pBuffer[i].m_iSub_Block_Count));
 
 	for (i = poMem_Mgr->m_iLayer_Count - 1; i > poMem_Mgr->m_iLayer_Count- iLayer_Count-1 && i>=0; i--)
 	{
@@ -1014,6 +1188,14 @@ void Disp_Mem(Mem_Mgr* poMem_Mgr,int iLayer_Count)
 		for (j = 0; j < (int)poMem_Mgr->m_Layer[i].m_iBlock_Count; j++)
 			printf("%llX ", ((unsigned long long*)poMem_Mgr->m_Layer[i].m_pIndex)[j]);
 		printf("\n");
+
+		//顺序分配条件下，应该能是全0xFF
+		////if (i == 2)
+		//{	
+		//	for (j = 0; j < (int)poMem_Mgr->m_Layer[i].m_iBlock_Count; j++)
+		//		if (((unsigned long long*)poMem_Mgr->m_Layer[i].m_pIndex)[j] != 0xFFFFFFFFFFFFFFFF)
+		//			printf("Here");
+		//}
 	}
 
 	free(pBuffer);
@@ -1075,13 +1257,21 @@ int bExpand(Mem_Mgr* poMem_Mgr, void* p, unsigned int iSize)
 		iSub_Block_Start = (poItem->m_iPos + poItem->m_iSub_Block_Count) % 64;
 		iOccupancy = ((unsigned long long*)poMem_Mgr->m_Layer[0].m_pIndex)[iBlock_Start];
 		iOccupancy >>= iSub_Block_Start;
+		iSub_Block_Start_All = (iBlock_Start << 6) + iSub_Block_Start;
 		for (j=iSub_Block_Start, iZero_Bit_Count=0; j < 64 && iZero_Bit_Count < iSub_Block_Count_Need; j++, iOccupancy >>= 1, iZero_Bit_Count++)
 			if (iOccupancy & 1)
 				break;
+		if (iZero_Bit_Count< iSub_Block_Count_Need && iBlock_Start+1 < (int)poMem_Mgr->m_Layer[0].m_iBlock_Count && !(iOccupancy&1) )
+		{
+			iBlock_Start++;
+			iOccupancy = ((unsigned long long*)poMem_Mgr->m_Layer[0].m_pIndex)[iBlock_Start];
+			for (j = 0; j < 64 && iZero_Bit_Count < iSub_Block_Count_Need; j++, iOccupancy >>= 1, iZero_Bit_Count++)
+				if (iOccupancy & 1)
+					break;
+		}
 		if (iZero_Bit_Count >= iSub_Block_Count_Need)
 		{
 			iResult = 1;
-			iSub_Block_Start_All = (iBlock_Start << 6) + iSub_Block_Start;
 			iSub_Block_Count_Free = iSub_Block_Count_Need;
 		}
 	}else if (i == 0)

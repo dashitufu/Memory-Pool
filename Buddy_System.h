@@ -68,6 +68,7 @@ unsigned int iGet_Random_No();
 //return: void 指针，用户自己转换为自己的类型
 void* pMalloc(Mem_Mgr* poMem_Mgr, unsigned int iSize);
 
+void* pMalloc_1(Mem_Mgr* poMem_Mgr, unsigned int iSize);
 //释放一项
 //Input:	p: 原来分配的指针
 void Free(Mem_Mgr* poMem_Mgr, void* p, int iCur_Piece);
